@@ -176,24 +176,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _handleScanResult(String barcode, bool isAdding) {
-    setState(() {
-      final existingIndex = _items.indexWhere(
-        (item) => item.barcode == barcode,
-      );
+  void _showRemoveQuantityDialog(int index) {
+    final qtyController = TextEditingController(text: '1');
+    final formKey = GlobalKey<FormState>();
+    final item = _items[index];
 
-      if (existingIndex >= 0) {
-        if (isAdding) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('${item.name} Çıkar'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Mevcut miktar: ${item.quantity}\nKaç adet çıkarmak istiyorsunuz?'),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: qtyController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: t('quantity'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.remove_circle_outline),
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) return t('requiredField');
+                  final num = int.tryParse(val);
+                  if (num == null || num <= 0) return t('invalidNumber');
+                  if (num > item.quantity) return 'En fazla ${item.quantity} çıkarabilirsiniz';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t('cancel')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final amountToRemove = int.parse(qtyController.text);
+                setState(() {
+                  _items[index].quantity -= amountToRemove;
+                  if (_items[index].quantity <= 0) {
+                    _items.removeAt(index);
+                  }
+                });
+                _saveItems();
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${t('removed')}: $amountToRemove adet'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Text('Çıkar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleScanResult(String barcode, bool isAdding) {
+    final existingIndex = _items.indexWhere((item) => item.barcode == barcode);
+
+    if (existingIndex >= 0) {
+      if (isAdding) {
+        setState(() {
           _items[existingIndex].quantity++;
-        } else {
-          if (_items[existingIndex].quantity > 1) {
-            _items[existingIndex].quantity--;
-          } else {
-            _items.removeAt(existingIndex);
-          }
-        }
+        });
+        _saveItems();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${t('added')}: $barcode'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       } else {
-        if (isAdding) {
+        _showRemoveQuantityDialog(existingIndex);
+      }
+    } else {
+      if (isAdding) {
+        setState(() {
           _items.add(
             InventoryItem(
               barcode: barcode,
@@ -201,19 +280,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               quantity: 1,
             ),
           );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(t('productNotFound')),
-              backgroundColor: Colors.redAccent,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
+        });
+        _saveItems();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${t('added')}: $barcode'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t('productNotFound')),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
       }
-    });
-    _saveItems();
+    }
   }
 
   void _showManualEntryDialog({InventoryItem? item}) {
@@ -416,14 +503,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     if (scannedCode != null && context.mounted) {
       _handleScanResult(scannedCode, isAdding);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isAdding ? '${t('added')}: $scannedCode' : '${t('removed')}: $scannedCode'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -644,15 +723,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          FloatingActionButton.extended(
             heroTag: 'btn_remove',
             onPressed: () => _openScanner(isAdding: false),
             backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
             elevation: 4,
-            child: const Icon(
+            icon: const Icon(
               Icons.remove_rounded,
               color: Colors.redAccent,
-              size: 28,
+            ),
+            label: Text(
+              t('removeProduct'),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.redAccent,
+              ),
             ),
           ),
           const SizedBox(height: 16),
