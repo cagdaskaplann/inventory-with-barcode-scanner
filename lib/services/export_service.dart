@@ -13,9 +13,9 @@ class ExportService {
     
     // Başlıklar
     sheetObject.appendRow([
-      const TextCellValue('Barkod'),
-      const TextCellValue('Ürün Adı'),
-      const TextCellValue('Miktar'),
+      TextCellValue('Barkod'),
+      TextCellValue('Ürün Adı'),
+      TextCellValue('Miktar'),
     ]);
     
     // Veriler
