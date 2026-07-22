@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/scanner_screen.dart';
 import 'models/inventory_item.dart';
 import 'services/storage_service.dart';
+import 'services/export_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -112,6 +113,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Envanter Paneli'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          if (_items.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.download),
+              tooltip: "Excel'e Aktar",
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Excel dosyası hazırlanıyor...')),
+                );
+                try {
+                  await ExportService.exportAndShare(_items);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Dışa aktarılırken hata oluştu.')),
+                  );
+                }
+              },
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
