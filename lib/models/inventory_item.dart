@@ -2,7 +2,7 @@ import 'dart:convert';
 
 class InventoryItem {
   final String barcode;
-  final String name;
+  String name;
   int quantity;
 
   InventoryItem({
