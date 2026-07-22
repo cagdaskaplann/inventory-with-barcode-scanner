@@ -1,14 +1,20 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'screens/scanner_screen.dart';
 import 'models/inventory_item.dart';
 import 'services/storage_service.dart';
 import 'services/export_service.dart';
+import 'providers/settings_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => SettingsProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -16,13 +22,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsProvider>(context);
+
     return MaterialApp(
       title: 'Envanter Tarayıcı',
       debugShowCheckedModeBanner: false,
+      themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6C63FF),
           brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6C63FF),
+          brightness: Brightness.dark,
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
@@ -399,6 +416,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsProvider>(context);
+    final isDark = settings.isDarkMode;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -406,7 +426,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'Envanter',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white.withValues(alpha: 0.8),
+        backgroundColor: isDark 
+            ? Colors.black.withValues(alpha: 0.8) 
+            : Colors.white.withValues(alpha: 0.8),
         elevation: 0,
         centerTitle: false,
         flexibleSpace: ClipRect(
@@ -416,6 +438,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              color: const Color(0xFF6C63FF),
+            ),
+            tooltip: "Temayı Değiştir",
+            onPressed: () => settings.toggleTheme(),
+          ),
           IconButton(
             icon: const Icon(Icons.local_shipping, color: Color(0xFF6C63FF)),
             tooltip: "Tedarikçileri Yönet",
@@ -451,9 +481,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFF3F4F6), Color(0xFFE5E7EB)],
+            colors: isDark
+                ? [const Color(0xFF1F2937), const Color(0xFF111827)]
+                : [const Color(0xFFF3F4F6), const Color(0xFFE5E7EB)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -499,7 +531,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? Colors.grey.shade900 : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -581,7 +613,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           FloatingActionButton(
             heroTag: 'btn_remove',
             onPressed: () => _openScanner(isAdding: false),
-            backgroundColor: Colors.white,
+            backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
             elevation: 4,
             child: const Icon(
               Icons.remove_rounded,
