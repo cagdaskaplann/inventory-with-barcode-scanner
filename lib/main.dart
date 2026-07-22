@@ -42,6 +42,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final StorageService _storageService = StorageService();
   List<InventoryItem> _items = [];
+  List<String> _suppliers = [];
   bool _isLoading = true;
 
   @override
@@ -52,14 +53,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadItems() async {
     final items = await _storageService.getItems();
+    final suppliers = await _storageService.getSuppliers();
     setState(() {
       _items = items;
+      _suppliers = suppliers;
       _isLoading = false;
     });
   }
 
   Future<void> _saveItems() async {
     await _storageService.saveItems(_items);
+  }
+
+  Future<void> _saveSuppliers() async {
+    await _storageService.saveSuppliers(_suppliers);
+  }
+
+  void _manageSuppliersDialog() {
+    final supplierController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Tedarikçileri Yönet'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: supplierController,
+                            decoration: const InputDecoration(
+                              labelText: 'Yeni Tedarikçi',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle, color: Color(0xFF6C63FF), size: 36),
+                          onPressed: () {
+                            if (supplierController.text.trim().isNotEmpty) {
+                              setState(() {
+                                _suppliers.add(supplierController.text.trim());
+                                _saveSuppliers();
+                              });
+                              setStateDialog(() {});
+                              supplierController.clear();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _suppliers.isEmpty 
+                      ? const Text('Henüz tedarikçi eklenmemiş.')
+                      : Flexible(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _suppliers.length,
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                title: Text(_suppliers[index]),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    setState(() {
+                                      _suppliers.removeAt(index);
+                                      _saveSuppliers();
+                                    });
+                                    setStateDialog(() {});
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Kapat'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
   }
 
   void _handleScanResult(String barcode, bool isAdding) {
@@ -123,6 +212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final quantityController = TextEditingController(
       text: item?.quantity.toString() ?? '1',
     );
+    String? selectedSupplier = item?.supplier;
 
     showDialog(
       context: context,
@@ -173,6 +263,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _suppliers.contains(selectedSupplier) ? selectedSupplier : null,
+                decoration: const InputDecoration(
+                  labelText: 'Tedarikçi',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.local_shipping),
+                ),
+                items: _suppliers.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (val) {
+                  selectedSupplier = val;
+                },
+              ),
             ],
           ),
         ),
@@ -200,18 +303,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         quantityController.text,
                       );
                       _items[existingIndex].name = nameController.text.trim();
+                      _items[existingIndex].supplier = selectedSupplier;
                     } else {
                       _items.add(
                         InventoryItem(
                           barcode: barcodeController.text.trim(),
                           name: nameController.text.trim(),
                           quantity: int.parse(quantityController.text),
+                          supplier: selectedSupplier,
                         ),
                       );
                     }
                   } else {
                     item.name = nameController.text.trim();
                     item.quantity = int.parse(quantityController.text);
+                    item.supplier = selectedSupplier;
                   }
                 });
                 _saveItems();
@@ -310,6 +416,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.local_shipping, color: Color(0xFF6C63FF)),
+            tooltip: "Tedarikçileri Yönet",
+            onPressed: _manageSuppliersDialog,
+          ),
           if (_items.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),

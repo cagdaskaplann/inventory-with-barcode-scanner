@@ -20,4 +20,16 @@ class StorageService {
     final List<String> data = items.map((e) => e.toJson()).toList();
     await prefs.setStringList(_key, data);
   }
+
+  static const String _suppliersKey = 'suppliers_data';
+
+  Future<List<String>> getSuppliers() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_suppliersKey) ?? [];
+  }
+
+  Future<void> saveSuppliers(List<String> suppliers) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_suppliersKey, suppliers);
+  }
 }

@@ -4,11 +4,13 @@ class InventoryItem {
   final String barcode;
   String name;
   int quantity;
+  String? supplier;
 
   InventoryItem({
     required this.barcode,
     required this.name,
     this.quantity = 1,
+    this.supplier,
   });
 
   Map<String, dynamic> toMap() {
@@ -16,6 +18,7 @@ class InventoryItem {
       'barcode': barcode,
       'name': name,
       'quantity': quantity,
+      'supplier': supplier,
     };
   }
 
@@ -24,6 +27,7 @@ class InventoryItem {
       barcode: map['barcode'] ?? '',
       name: map['name'] ?? '',
       quantity: map['quantity']?.toInt() ?? 0,
+      supplier: map['supplier'],
     );
   }
 

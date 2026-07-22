@@ -16,6 +16,7 @@ class ExportService {
       TextCellValue('Barkod'),
       TextCellValue('Ürün Adı'),
       TextCellValue('Miktar'),
+      TextCellValue('Tedarikçi'),
     ]);
     
     // Veriler
@@ -24,6 +25,7 @@ class ExportService {
         TextCellValue(item.barcode),
         TextCellValue(item.name),
         IntCellValue(item.quantity),
+        TextCellValue(item.supplier ?? '-'),
       ]);
     }
     
