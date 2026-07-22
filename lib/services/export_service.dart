@@ -3,23 +3,22 @@ import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/inventory_item.dart';
+import '../l10n/app_translations.dart';
 
 class ExportService {
-  static Future<void> exportAndShare(List<InventoryItem> items) async {
+  static Future<void> exportAndShare(List<InventoryItem> items, String langCode) async {
     var excel = Excel.createExcel();
-    // Yeni bir sayfa oluştur ve onu varsayılan yap
-    Sheet sheetObject = excel['Envanter'];
-    excel.setDefaultSheet('Envanter');
     
-    // Başlıklar
+    Sheet sheetObject = excel[AppTranslations.get(langCode, 'appTitle')];
+    excel.setDefaultSheet(AppTranslations.get(langCode, 'appTitle'));
+    
     sheetObject.appendRow([
-      TextCellValue('Barkod'),
-      TextCellValue('Ürün Adı'),
-      TextCellValue('Miktar'),
-      TextCellValue('Tedarikçi'),
+      TextCellValue(AppTranslations.get(langCode, 'barcodeNo')),
+      TextCellValue(AppTranslations.get(langCode, 'productName')),
+      TextCellValue(AppTranslations.get(langCode, 'quantity')),
+      TextCellValue(AppTranslations.get(langCode, 'supplier')),
     ]);
     
-    // Veriler
     for (var item in items) {
       sheetObject.appendRow([
         TextCellValue(item.barcode),
@@ -29,7 +28,6 @@ class ExportService {
       ]);
     }
     
-    // Dosyayı geçici klasöre kaydet
     final directory = await getTemporaryDirectory();
     final String filePath = '${directory.path}/envanter_${DateTime.now().millisecondsSinceEpoch}.xlsx';
     
@@ -38,8 +36,7 @@ class ExportService {
       final File file = File(filePath);
       await file.writeAsBytes(fileBytes);
       
-      // Dosyayı paylaş
-      await Share.shareXFiles([XFile(filePath)], text: 'Güncel Envanter Listesi');
+      await Share.shareXFiles([XFile(filePath)], text: AppTranslations.get(langCode, 'appTitle'));
     }
   }
 }

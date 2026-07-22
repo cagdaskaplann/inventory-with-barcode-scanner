@@ -7,6 +7,7 @@ import 'models/inventory_item.dart';
 import 'services/storage_service.dart';
 import 'services/export_service.dart';
 import 'providers/settings_provider.dart';
+import 'l10n/app_translations.dart';
 
 void main() {
   runApp(
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget {
     final settings = Provider.of<SettingsProvider>(context);
 
     return MaterialApp(
-      title: 'Envanter Tarayıcı',
+      title: AppTranslations.get(settings.languageCode, 'appTitle'),
       debugShowCheckedModeBanner: false,
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
@@ -86,6 +87,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await _storageService.saveSuppliers(_suppliers);
   }
 
+  String t(String key) {
+    return AppTranslations.get(
+      Provider.of<SettingsProvider>(context, listen: false).languageCode, 
+      key
+    );
+  }
+
   void _manageSuppliersDialog() {
     final supplierController = TextEditingController();
     showDialog(
@@ -95,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           builder: (context, setStateDialog) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Tedarikçileri Yönet'),
+              title: Text(t('manageSuppliers')),
               content: SizedBox(
                 width: double.maxFinite,
                 child: Column(
@@ -106,9 +114,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: TextField(
                             controller: supplierController,
-                            decoration: const InputDecoration(
-                              labelText: 'Yeni Tedarikçi',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: t('newSupplier'),
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -130,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     _suppliers.isEmpty 
-                      ? const Text('Henüz tedarikçi eklenmemiş.')
+                      ? Text(t('noSupplier'))
                       : Flexible(
                           child: ListView.builder(
                             shrinkWrap: true,
@@ -158,7 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Kapat'),
+                  child: Text(t('close')),
                 ),
               ],
             );
@@ -184,42 +192,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _items.removeAt(existingIndex);
           }
         }
-      } else if (isAdding) {
-        _items.add(
-          InventoryItem(barcode: barcode, name: 'Yeni Ürün ($barcode)'),
-        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bu ürün envanterde bulunamadı!')),
-        );
-        return;
+        if (isAdding) {
+          _items.add(
+            InventoryItem(
+              barcode: barcode,
+              name: t('productName'),
+              quantity: 1,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(t('productNotFound')),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
       }
     });
-
     _saveItems();
-  }
-
-  Future<void> _openScanner({required bool isAdding}) async {
-    final scannedCode = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (context) => const ScannerScreen()),
-    );
-
-    if (scannedCode != null && context.mounted) {
-      _handleScanResult(scannedCode, isAdding);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isAdding ? 'Eklendi: $scannedCode' : 'Çıkarıldı: $scannedCode',
-          ),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   void _showManualEntryDialog({InventoryItem? item}) {
@@ -235,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(item == null ? "Yeni Ürün Ekle" : "Ürünü Düzenle"),
+        title: Text(item == null ? t('addProduct') : t('editProduct')),
         content: Form(
           key: formKey,
           child: Column(
@@ -243,50 +237,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               TextFormField(
                 controller: barcodeController,
-                decoration: const InputDecoration(
-                  labelText: 'Barkod No',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.qr_code),
+                decoration: InputDecoration(
+                  labelText: t('barcodeNo'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.qr_code),
                 ),
                 readOnly:
                     item != null, // Barkod düzenleme modunda değiştirilemesin
                 validator: (val) =>
-                    val == null || val.isEmpty ? 'Zorunlu alan' : null,
+                    val == null || val.isEmpty ? t('requiredField') : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Ürün Adı',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.inventory_2),
+                decoration: InputDecoration(
+                  labelText: t('productName'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.inventory_2),
                 ),
                 validator: (val) =>
-                    val == null || val.isEmpty ? 'Zorunlu alan' : null,
+                    val == null || val.isEmpty ? t('requiredField') : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'Miktar',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.numbers),
+                decoration: InputDecoration(
+                  labelText: t('quantity'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.numbers),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Zorunlu alan';
+                  if (val == null || val.isEmpty) return t('requiredField');
                   if (int.tryParse(val) == null)
-                    return 'Geçerli bir sayı girin';
+                    return t('invalidNumber');
                   return null;
                 },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _suppliers.contains(selectedSupplier) ? selectedSupplier : null,
-                decoration: const InputDecoration(
-                  labelText: 'Tedarikçi',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.local_shipping),
+                decoration: InputDecoration(
+                  labelText: t('supplier'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.local_shipping),
                 ),
                 items: _suppliers.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (val) {
@@ -299,7 +293,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("İptal"),
+            child: Text(t('cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -341,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.of(ctx).pop();
               }
             },
-            child: const Text("Kaydet", style: TextStyle(color: Colors.white)),
+            child: Text(t('save'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -360,11 +354,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Nasıl eklemek istersiniz?',
+                t('howToAdd'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
+                  color: Provider.of<SettingsProvider>(context, listen: false).isDarkMode ? Colors.white : Colors.grey.shade800,
                 ),
               ),
             ),
@@ -380,9 +374,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Color(0xFF6C63FF),
                 ),
               ),
-              title: const Text(
-                'Kamerayla Tara',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              title: Text(
+                t('scanWithCamera'),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               onTap: () {
                 Navigator.of(ctx).pop();
@@ -398,9 +392,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: const Icon(Icons.keyboard, color: Color(0xFF6C63FF)),
               ),
-              title: const Text(
-                'El İle Gir',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              title: Text(
+                t('enterManually'),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               onTap: () {
                 Navigator.of(ctx).pop();
@@ -414,6 +408,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _openScanner({required bool isAdding}) async {
+    final scannedCode = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const ScannerScreen()),
+    );
+    
+    if (scannedCode != null && context.mounted) {
+      _handleScanResult(scannedCode, isAdding);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAdding ? '${t('added')}: $scannedCode' : '${t('removed')}: $scannedCode'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -422,9 +435,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
-          'Envanter',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          t('appTitle'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: isDark 
             ? Colors.black.withValues(alpha: 0.8) 
@@ -438,17 +451,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.language, color: Color(0xFF6C63FF)),
+            tooltip: t('changeLanguage'),
+            onSelected: (String code) {
+              settings.setLanguage(code);
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'tr',
+                child: Text('🇹🇷 Türkçe'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'en',
+                child: Text('🇬🇧 English'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'it',
+                child: Text('🇮🇹 Italiano'),
+              ),
+            ],
+          ),
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
               color: const Color(0xFF6C63FF),
             ),
-            tooltip: "Temayı Değiştir",
+            tooltip: t('changeTheme'),
             onPressed: () => settings.toggleTheme(),
           ),
           IconButton(
             icon: const Icon(Icons.local_shipping, color: Color(0xFF6C63FF)),
-            tooltip: "Tedarikçileri Yönet",
+            tooltip: t('manageSuppliers'),
             onPressed: _manageSuppliersDialog,
           ),
           if (_items.isNotEmpty)
@@ -459,19 +493,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icons.download_rounded,
                   color: Color(0xFF6C63FF),
                 ),
-                tooltip: "Excel'e Aktar",
+                tooltip: t('exportToExcel'),
                 onPressed: () async {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Excel dosyası hazırlanıyor...'),
+                    SnackBar(
+                      content: Text(t('excelPreparing')),
                     ),
                   );
                   try {
-                    await ExportService.exportAndShare(_items);
+                    await ExportService.exportAndShare(_items, settings.languageCode);
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Dışa aktarılırken hata oluştu.'),
+                      SnackBar(
+                        content: Text(t('exportError')),
                       ),
                     );
                   }
@@ -505,7 +539,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Envanter boş',
+                        t('inventoryEmpty'),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -514,7 +548,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Ürün eklemek için sağ alt köşeyi kullanın.',
+                        t('useFabToAdd'),
                         style: TextStyle(color: Colors.grey.shade500),
                       ),
                     ],
@@ -567,7 +601,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          item.barcode,
+                          '${item.barcode} ${item.supplier != null ? '• ${item.supplier}' : ''}',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 13,
@@ -628,11 +662,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             backgroundColor: const Color(0xFF6C63FF),
             elevation: 6,
             icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text(
-              'Ürün Ekle',
-              style: TextStyle(
-                color: Colors.white,
+            label: Text(
+              t('addProduct'),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ),
