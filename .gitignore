@@ -9,6 +9,8 @@
 .history
 .svn/
 .metadata
+.swiftpm/
+migrate_working_dir/
 
 # IntelliJ related
 *.iml
@@ -54,3 +56,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/key.properties
+
+# Platform specific
+/linux/
+/Windows/
+/macOS/
+/web/
