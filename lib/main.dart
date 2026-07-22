@@ -106,6 +106,145 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _showManualEntryDialog({InventoryItem? item}) {
+    final formKey = GlobalKey<FormState>();
+    final barcodeController = TextEditingController(text: item?.barcode);
+    final nameController = TextEditingController(text: item?.name);
+    final quantityController = TextEditingController(text: item?.quantity.toString() ?? '1');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(item == null ? "Yeni Ürün Ekle" : "Ürünü Düzenle"),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: barcodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Barkod No',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.qr_code),
+                ),
+                readOnly: item != null, // Barkod düzenleme modunda değiştirilemesin
+                validator: (val) => val == null || val.isEmpty ? 'Zorunlu alan' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Ürün Adı',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.inventory_2),
+                ),
+                validator: (val) => val == null || val.isEmpty ? 'Zorunlu alan' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: quantityController,
+                decoration: const InputDecoration(
+                  labelText: 'Miktar',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.numbers),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Zorunlu alan';
+                  if (int.tryParse(val) == null) return 'Geçerli bir sayı girin';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                setState(() {
+                  if (item == null) {
+                    final existingIndex = _items.indexWhere((i) => i.barcode == barcodeController.text.trim());
+                    if (existingIndex >= 0) {
+                      _items[existingIndex].quantity += int.parse(quantityController.text);
+                      _items[existingIndex].name = nameController.text.trim();
+                    } else {
+                      _items.add(InventoryItem(
+                        barcode: barcodeController.text.trim(),
+                        name: nameController.text.trim(),
+                        quantity: int.parse(quantityController.text),
+                      ));
+                    }
+                  } else {
+                    item.name = nameController.text.trim();
+                    item.quantity = int.parse(quantityController.text);
+                  }
+                });
+                _saveItems();
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: const Text("Kaydet", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Nasıl eklemek istersiniz?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFF6C63FF).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.qr_code_scanner, color: Color(0xFF6C63FF)),
+              ),
+              title: const Text('Kamerayla Tara', style: TextStyle(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _openScanner(isAdding: true);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFF6C63FF).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.keyboard, color: Color(0xFF6C63FF)),
+              ),
+              title: const Text('El İle Gir', style: TextStyle(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showManualEntryDialog();
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,6 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           child: ListTile(
+                            onTap: () => _showManualEntryDialog(item: item),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                             leading: Container(
                               padding: const EdgeInsets.all(10),
@@ -235,7 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           FloatingActionButton.extended(
             heroTag: 'btn_add',
-            onPressed: () => _openScanner(isAdding: true),
+            onPressed: _showAddOptions,
             backgroundColor: const Color(0xFF6C63FF),
             elevation: 6,
             icon: const Icon(Icons.add_rounded, color: Colors.white),
